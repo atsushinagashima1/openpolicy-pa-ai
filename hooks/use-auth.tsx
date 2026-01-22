@@ -21,16 +21,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // 現在のセッションを取得
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
+    // 初期セッションの確認
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('Session error:', error)
+        }
+        
+        setSession(session)
+        setUser(session?.user ?? null)
+      } catch (error) {
+        console.error('Auth initialization error:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    initializeAuth()
 
     // 認証状態の変更を監視
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      async (event, session) => {
+        console.log('Auth state changed:', event)
         setSession(session)
         setUser(session?.user ?? null)
         setLoading(false)
@@ -58,6 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut()
+    setUser(null)
+    setSession(null)
   }
 
   return (
